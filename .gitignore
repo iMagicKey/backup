@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Secrets and local configuration — never commit these
+.env
+.env.*
+!.env.example
+app/config/dev/
+*.pem
+*.key
+
+# Runtime data
+app/logs/
+app/storage/
+app/data/
+installed.service
+*.log
+*.pid
+*.tmp
+
+# Tooling
+coverage/
+.eslintcache
+.npm/
+*.tgz
+.vscode/
+.idea/
+.claude/
+.DS_Store

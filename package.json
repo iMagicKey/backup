@@ -1,0 +1,65 @@
+{
+    "name": "backup",
+    "version": "2.0.0",
+    "description": "Self-hosted backup service: files, MariaDB/MySQL, PostgreSQL and MongoDB (on the host or in Docker containers) to Google Drive with per-period rotation and Telegram alerts.",
+    "keywords": [
+        "backup",
+        "google-drive",
+        "mariadb",
+        "mysql",
+        "postgresql",
+        "mongodb",
+        "docker",
+        "tar",
+        "zstd"
+    ],
+    "homepage": "https://github.com/iMagicKey/backup#readme",
+    "bugs": {
+        "url": "https://github.com/iMagicKey/backup/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/iMagicKey/backup.git"
+    },
+    "license": "MIT",
+    "author": "iMagicKey",
+    "type": "module",
+    "main": "app/index.js",
+    "private": true,
+    "scripts": {
+        "start": "node --env-file-if-exists=.env app/index.js",
+        "live": "node --env-file=.env app/index.js",
+        "dev": "node --env-file=.env.dev app/index.js",
+        "backup:once": "node --env-file-if-exists=.env app/once.js",
+        "check": "node --env-file-if-exists=.env app/check.js",
+        "create-auth": "node --env-file-if-exists=.env app/code/create.js",
+        "init": "npm install && node system/init.js",
+        "install-service": "node system/service.js install",
+        "uninstall-service": "node system/service.js uninstall",
+        "clear-logs": "node system/logs.js",
+        "test": "node --test \"test/unit/**/*.test.js\"",
+        "test:integration": "node --test --test-concurrency=1 \"test/integration/**/*.test.js\"",
+        "lint": "eslint .",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "verify": "npm run lint && npm run format:check && npm test"
+    },
+    "dependencies": {
+        "@googleapis/drive": "^27.0.0",
+        "imagic-config": "^1.0.1",
+        "imagic-logger": "^1.0.1",
+        "imagic-scheduler": "^1.0.1",
+        "imagic-telegram": "^1.1.1"
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "eslint": "^10.13.0",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-n": "^18.5.0",
+        "globals": "^17.13.0",
+        "prettier": "^3.9.10"
+    },
+    "engines": {
+        "node": ">=24"
+    }
+}
