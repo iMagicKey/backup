@@ -19,7 +19,7 @@ First public release. Internals were rewritten; existing `.env` files keep worki
 - Persistent state (`app/data/state.json`) and retries of failed periods.
 - `npm run backup:once` (with `--no-upload` and period arguments) and `npm run check` (diagnostics).
 - Interactive `npm run create-auth` that accepts the code or the full redirect URL.
-- Unit tests, database round-trip integration tests (host and Docker mode), GitHub Actions CI.
+- Unit tests, database round-trip integration tests (host and Docker mode), GitHub Actions CI (`mariadb:11`, `postgres:18`, `mongo:9`).
 - `.env.example`, `AGENTS.md`, `SECURITY.md`, `LICENSE`.
 
 ### Changed

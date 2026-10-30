@@ -333,6 +333,7 @@ Start with `npm run check`; it tests most of the points below. Logs are in `app/
 | MariaDB `Access denied … (using password: NO)`                          | `MARIADB_PASSWORD` is empty or wrong. With MySQL versions that no longer read `MYSQL_PWD`, use `~/.my.cnf` instead                                                    |
 | MariaDB `… to use LOCK TABLES` / routines errors                        | Grant the privileges listed under [Security](#security) or add `MARIADB_EXTRA_ARGS=--skip-routines`                                                                   |
 | MongoDB `can't create session: failed to connect`                       | Server down or wrong host/port in `MONGODB_URI`. In Docker mode the URI is resolved **inside** the container (`localhost`)                                            |
+| MongoDB container exits: `Linux kernel versions 6.19 and newer has a known incompatibility` | MongoDB 8.0 does not start on kernel ≥ 6.19 ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)). Upgrade the database to MongoDB 9.0 (or a fixed 8.0 release); this is unrelated to the backup service |
 | `Another backup is already running`                                     | A service instance and `backup:once` use the same storage directory at the same time; wait or stop one. Stale locks of dead processes are cleaned up automatically   |
 | No backup after restart                                                 | Periods run only when their label changed since the last success (see `app/data/state.json`). Delete a period from that file, or run `npm run backup:once`, to force a run |
 | Disk full                                                               | Point `BACKUP_STORAGE_DIR` to a larger disk, set `BACKUP_KEEP_LOCAL=false`, exclude large paths                                                                       |
@@ -366,7 +367,7 @@ IT_MONGODB_CONTAINER=it-mongo IT_MONGODB_URI='mongodb://root:…@localhost:27017
 npm run test:integration
 ```
 
-`IT_COMPRESSION=gzip|zstd` selects the compression (default `zstd`). **The tests create and drop a database named `bk_it`; never point them at production servers.** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the Docker variant against `mariadb:11`, `postgres:18` and `mongo:8` on every push.
+`IT_COMPRESSION=gzip|zstd` selects the compression (default `zstd`). **The tests create and drop a database named `bk_it`; never point them at production servers.** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the Docker variant against `mariadb:11`, `postgres:18` and `mongo:9` on every push.
 
 `test/helpers/fake-docker.js` is a Docker CLI stand-in that runs `docker exec` commands on the host. It lets the Docker code paths be tested without Docker and records all arguments, so the tests can assert that no password is passed on a command line.
 

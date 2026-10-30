@@ -45,7 +45,7 @@ jobs:
               run: |
                   docker run -d --name it-mariadb -e MARIADB_ROOT_PASSWORD="$MARIADB_PW" mariadb:11
                   docker run -d --name it-postgres -e POSTGRES_PASSWORD="$POSTGRES_PW" postgres:18
-                  docker run -d --name it-mongo -e MONGO_INITDB_ROOT_USERNAME=root -e MONGO_INITDB_ROOT_PASSWORD="$MONGO_PW" mongo:8
+                  docker run -d --name it-mongo -e MONGO_INITDB_ROOT_USERNAME=root -e MONGO_INITDB_ROOT_PASSWORD="$MONGO_PW" mongo:9
 
                   wait_for() {
                     local name=$1; shift
@@ -59,12 +59,17 @@ jobs:
                   wait_for it-postgres docker exec it-postgres psql -U postgres -c 'SELECT 1'
                   wait_for it-mongo docker exec it-mongo mongosh --quiet -u root -p "$MONGO_PW" --authenticationDatabase admin --eval 'db.runCommand({ping: 1})'
             - name: Run integration tests (docker exec mode)
+              shell: bash
               run: |
+                  # Credentials inside a connection string must be URL-encoded.
+                  MONGO_PW_URI=$(node -p 'encodeURIComponent(process.argv[1])' "$MONGO_PW")
                   for compression in zstd gzip; do
                     IT_COMPRESSION=$compression \
                     IT_DOCKER_COMMAND=docker \
                     IT_MARIADB_CONTAINER=it-mariadb IT_MARIADB_USER=root IT_MARIADB_PASSWORD="$MARIADB_PW" \
                     IT_POSTGRES_CONTAINER=it-postgres IT_POSTGRES_USER=postgres IT_POSTGRES_PASSWORD="$POSTGRES_PW" \
-                    IT_MONGODB_CONTAINER=it-mongo IT_MONGODB_URI="mongodb://root:$MONGO_PW@localhost:27017/?authSource=admin" \
-                    npm run test:integration
+                    IT_MONGODB_CONTAINER=it-mongo IT_MONGODB_URI="mongodb://root:$MONGO_PW_URI@localhost:27017/?authSource=admin" \
+                    npm run test:integration 2>&1 | tee it.log
+                    # Fail if any round trip was skipped (e.g. a missing IT_* variable).
+                    grep -qE '^(ℹ|#) pass 4$' it.log && grep -qE '^(ℹ|#) skipped 0$' it.log || { echo "::error::integration tests did not all run ($compression)"; exit 1; }
                   done
