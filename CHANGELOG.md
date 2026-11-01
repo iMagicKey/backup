@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** the misspelled 1.x scheduler names were corrected: the environment variable is now `SCHEDULER_INTERVAL`, the config file `app/config/<APP_ENV>/scheduler.json` and the source directory `app/code/scheduler/`. Rename the variable in existing `.env` files (it is optional; the default is 15000 ms).
+
 ## [2.0.0] - 2026-10-30
 
 First public release. Internals were rewritten; existing `.env` files keep working (see "Upgrading from 1.x" in the README).
@@ -45,7 +49,7 @@ First public release. Internals were rewritten; existing `.env` files keep worki
 - Paths or passwords containing quotes broke the shell commands (and allowed command injection).
 - Uploads ran in an un-awaited `forEach`: errors became unhandled rejections and a new run could start while the previous upload was still in progress.
 - The scheduler never set its in-progress flag, so runs could overlap.
-- A missing `SHEDULER_INTERVAL` produced a 1 ms timer loop; `app/config/live/sheduler.json` was ignored.
+- A missing scheduler interval variable produced a 1 ms timer loop; the scheduler config file in `app/config/live/` was ignored.
 - Telegram messages containing `<` or `&` (stack traces) were rejected by Telegram because of HTML parse mode.
 - `pg_dump -v` output could exceed `exec`'s 1 MB buffer and abort large PostgreSQL backups.
 - Restarting the service skipped the backup of the current period.

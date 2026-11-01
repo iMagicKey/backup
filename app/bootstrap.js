@@ -19,7 +19,7 @@ export default async function bootstrap({ requireAuth = true, exitOnError = true
     const fileConfig = await loadConfig({
         dir: path.join(ROOT_DIR, 'app/config'),
         env: config.appEnv,
-        defaults: { logger: { output: ['console'] }, sheduler: { interval: 15000 } },
+        defaults: { logger: { output: ['console'] }, scheduler: { interval: 15000 } },
     })
 
     Logger.setConfig({ prefix: 'BACKUP', logDir: path.join(ROOT_DIR, 'app/logs'), ...fileConfig.logger })
@@ -33,7 +33,7 @@ export default async function bootstrap({ requireAuth = true, exitOnError = true
         process.exit(1)
     }
 
-    const tickInterval = Number(config.schedulerInterval) || Number(fileConfig.sheduler?.interval) || 15000
+    const tickInterval = Number(config.schedulerInterval) || Number(fileConfig.scheduler?.interval) || 15000
 
     return { config, fileConfig, tickInterval, errors }
 }

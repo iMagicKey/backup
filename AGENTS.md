@@ -24,8 +24,8 @@ npm run check              # diagnostics against the configured environment
 ## Architecture
 
 ```
-app/index.js → bootstrap.js → code/index.js → sheduler/index.js (imagic-scheduler, 1-minute task)
-  sheduler/tasks/backup.js   due periods = labels changed since last success (store.js); retry; overlap guard
+app/index.js → bootstrap.js → code/index.js → scheduler/index.js (imagic-scheduler, 1-minute task)
+  scheduler/tasks/backup.js   due periods = labels changed since last success (store.js); retry; overlap guard
   backup/index.js runBackup  lock → createBackup (components in parallel → manifest + SHA256SUMS → tar bundle)
                              → uploadBackup (upload once, files.copy for other periods, MD5 check, retention) → report
 ```
@@ -52,7 +52,6 @@ app/index.js → bootstrap.js → code/index.js → sheduler/index.js (imagic-sc
 ### Behaviour and compatibility
 
 - Existing environment variable names are a public interface. Add new ones with safe defaults and document them in `.env.example`, `README.md` (Configuration table) and `config.js`; never rename or remove one without a deprecation path and a CHANGELOG entry.
-- The `sheduler` spelling (directory, `SHEDULER_INTERVAL`, `app/config/*/sheduler.json`) is intentional for backwards compatibility. Do not rename it.
 - A failing component must not prevent the others from being backed up. Throw from a component only for that component's failure; `createBackup` collects failures.
 - GNU tar exit code 1 ("file changed as we read it") is a warning, not a failure.
 - Period labels and file timestamps are UTC. File names must not contain `:`.

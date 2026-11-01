@@ -142,7 +142,7 @@ All settings are environment variables, normally kept in `.env` (`npm run live`,
 | `BACKUP_TIMEOUT_MINUTES` | `360`                  | Kill any single dump/archive command running longer than this                                       |
 | `BACKUP_RETRY_MINUTES`   | `15`                   | Delay before retrying periods whose upload failed                                                   |
 | `DOCKER_COMMAND`         | `docker`               | Docker CLI used for `*_DOCKER_CONTAINER` (e.g. `podman`)                                            |
-| `SHEDULER_INTERVAL`      | `app/config` (15000)   | Scheduler tick in ms. The backup check itself runs once per minute                                  |
+| `SCHEDULER_INTERVAL`      | `app/config` (15000)   | Scheduler tick in ms. The backup check itself runs once per minute                                  |
 
 ### MariaDB / MySQL
 
@@ -198,7 +198,7 @@ Dumps always use `--single-transaction --quick --routines --triggers` (consisten
 `app/config/<APP_ENV>/*.json` is loaded with [imagic-config](https://www.npmjs.com/package/imagic-config):
 
 - `logger.json`: options for [imagic-logger](https://www.npmjs.com/package/imagic-logger), e.g. `{"output": ["console", "file"]}` (files go to `app/logs/<level>.log`)
-- `sheduler.json`: `{"interval": 15000}`, the scheduler tick
+- `scheduler.json`: `{"interval": 15000}`, the scheduler tick
 
 If the directory does not exist (e.g. `app/config/dev/`, which is git-ignored), logging goes to the console only.
 
@@ -378,6 +378,7 @@ npm run test:integration
 Version 2.0 is a rewrite of the internals. Existing `.env` files keep working. Changes to note:
 
 - **Node.js ≥ 24** is required.
+- **Scheduler settings renamed** (the 1.x names were misspelled): use `SCHEDULER_INTERVAL` in `.env` and `app/config/<APP_ENV>/scheduler.json`. Both are optional; the default tick is 15000 ms.
 - **Bundle format**: `<period>-YYYY-MM-DD_HH-mm.tar` (uncompressed tar of individually compressed members, plus `manifest.json` and `SHA256SUMS`) instead of `<period>-YYYY.MM.DD-HH:mm.tar.zst`. Timestamps no longer contain colons. Member names changed (`files.tar.zst`, `mariadb.sql.zst`, `postgres-<db>.dump`, `postgres-all.sql.zst`, `mongodb.archive.zst`), and database dumps are now compressed. Old backups in Drive are rotated out normally.
 - **MariaDB** single-database dumps now use `--databases` (the dump contains `CREATE DATABASE`/`USE`) and `--single-transaction --quick --routines --triggers`. `MARIADB_DATABASE` accepts a list.
 - **PostgreSQL**: `POSTGRES_USER` defaults to `postgres`; `POSTGRES_DATABASE` accepts a list.
@@ -398,7 +399,7 @@ app/
   once.js                one-shot backup (npm run backup:once)
   check.js               diagnostics (npm run check)
   bootstrap.js           shared start-up: umask, file config, logger, env validation, redaction, Telegram
-  config/live/           logger.json, sheduler.json (loaded with imagic-config)
+  config/live/           logger.json, scheduler.json (loaded with imagic-config)
   libs/
     logger.js            imagic-logger wrapper that redacts secrets
     redact.js            secret registry and redaction
@@ -410,7 +411,7 @@ app/
     backup/
       index.js           orchestration: dump → bundle → upload/copy → rotate → report
       files.js mariadb.js postgres.js mongodb.js
-    sheduler/
+    scheduler/
       index.js           imagic-scheduler setup
       tasks/backup.js    due-period detection, retry, overlap guard
     utils/
@@ -426,8 +427,6 @@ test/unit/               unit tests (node:test)
 test/integration/        database round-trip tests
 test/helpers/            fake Drive client, fake Docker CLI
 ```
-
-("sheduler" is a historical spelling kept for compatibility with existing configurations such as `SHEDULER_INTERVAL`.)
 
 ---
 

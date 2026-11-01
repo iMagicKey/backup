@@ -194,7 +194,7 @@ export function buildConfig(env = process.env) {
 
     return {
         appEnv: str(env.APP_ENV) || 'live',
-        schedulerInterval: str(env.SHEDULER_INTERVAL ?? env.SCHEDULER_INTERVAL),
+        schedulerInterval: str(env.SCHEDULER_INTERVAL),
         backup,
         docker,
         mariadb,

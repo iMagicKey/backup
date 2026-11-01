@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { configFrom, tempDir } from '../helpers/setup.js'
-import { createBackupTask, getDuePeriods } from '../../app/code/sheduler/tasks/backup.js'
+import { createBackupTask, getDuePeriods } from '../../app/code/scheduler/tasks/backup.js'
 import { createStore } from '../../app/code/store.js'
 
 function memoryStore(initial = {}) {

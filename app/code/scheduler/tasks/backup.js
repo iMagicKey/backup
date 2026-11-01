@@ -33,7 +33,7 @@ export function createBackupTask({ config, store, runBackup, now = () => new Dat
             const failed = due.filter((period) => !succeeded.includes(period))
             if (failed.length) {
                 retryAt = Date.now() + config.backup.retryMs
-                Logger.pwarn('Sheduler', `Will retry ${failed.join(', ')} in ${Math.round(config.backup.retryMs / 60000)} min`)
+                Logger.pwarn('Scheduler', `Will retry ${failed.join(', ')} in ${Math.round(config.backup.retryMs / 60000)} min`)
             }
         } catch (err) {
             retryAt = Date.now() + config.backup.retryMs
