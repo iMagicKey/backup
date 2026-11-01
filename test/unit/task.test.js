@@ -118,3 +118,28 @@ test('state recorded elsewhere (e.g. by backup:once) is picked up before each ru
     await task()
     assert.deepEqual(calls, [])
 })
+
+test('a partial success records the successful periods and retries only the others', async (t) => {
+    const config = configFrom({ BACKUP_PERIODS: 'daily,weekly', BACKUP_RETRY_MINUTES: '1' })
+    const store = memoryStore()
+    const calls = []
+    const task = createBackupTask({
+        config,
+        store,
+        now: () => new Date('2026-10-30T10:00:00Z'),
+        runBackup: async (periods) => {
+            calls.push(periods)
+            return { succeeded: periods.filter((p) => p === 'daily' || calls.length > 1) }
+        },
+    })
+
+    await task()
+    assert.deepEqual(store.saved, { daily: '2026-10-30' })
+    await task() // inside the retry delay
+    assert.equal(calls.length, 1)
+
+    t.mock.timers.enable({ apis: ['Date'], now: Date.now() + 61 * 1000 })
+    await task()
+    assert.deepEqual(calls, [['daily', 'weekly'], ['weekly']])
+    assert.deepEqual(store.saved, { daily: '2026-10-30', weekly: '2026-W44' })
+})

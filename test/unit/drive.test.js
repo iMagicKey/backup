@@ -14,7 +14,13 @@ import {
     FOLDER_MIME,
 } from '../../app/code/utils/drive.js'
 import { uploadBackup } from '../../app/code/backup/index.js'
-import { extractCode } from '../../app/code/create.js'
+import { extractCode, buildAuthUrl } from '../../app/code/create.js'
+import { DRIVE_SCOPES, createOAuthClient, createDriveClient, copyFile } from '../../app/code/utils/drive.js'
+
+const GOOGLE_ENV = {
+    GOOGLE_APP: '{"clientId":"cid.apps.googleusercontent.com","clientSecret":"csecret","redirectURL":"http://localhost"}',
+    GOOGLE_AUTH: '{"refresh_token":"rtoken","access_token":"atoken"}',
+}
 
 test('escapeQuery', () => {
     assert.equal(escapeQuery("it's a \\ test"), "it\\'s a \\\\ test")
@@ -95,4 +101,45 @@ test('uploadBackup falls back to uploading when copy fails', async (t) => {
 test('create-auth accepts a bare code or the redirect URL', () => {
     assert.equal(extractCode(' 4/abc '), '4/abc')
     assert.equal(extractCode('http://localhost/?code=4%2Fabc&scope=x'), '4/abc')
+})
+
+test('only the drive.file scope is requested', () => {
+    assert.deepEqual(DRIVE_SCOPES, ['https://www.googleapis.com/auth/drive.file'])
+})
+
+test('createOAuthClient and buildAuthUrl produce an offline consent URL for this client', () => {
+    const config = configFrom(GOOGLE_ENV)
+    const client = createOAuthClient(config)
+    assert.equal(typeof client.generateAuthUrl, 'function')
+
+    const url = new URL(buildAuthUrl(config))
+    assert.equal(url.hostname, 'accounts.google.com')
+    assert.equal(url.searchParams.get('client_id'), 'cid.apps.googleusercontent.com')
+    assert.equal(url.searchParams.get('redirect_uri'), 'http://localhost')
+    assert.equal(url.searchParams.get('access_type'), 'offline')
+    assert.equal(url.searchParams.get('prompt'), 'consent')
+    assert.equal(url.searchParams.get('scope'), DRIVE_SCOPES[0])
+})
+
+test('createDriveClient is a Drive v3 client authorized with the stored tokens (no network)', () => {
+    const client = createDriveClient(configFrom(GOOGLE_ENV))
+    assert.equal(typeof client.files.create, 'function')
+    assert.equal(typeof client.files.copy, 'function')
+    const auth = client.context._options.auth
+    assert.equal(auth.credentials.refresh_token, 'rtoken')
+    assert.equal(auth.credentials.access_token, 'atoken')
+})
+
+test('copyFile copies server-side and verifies the result', async () => {
+    const { client, add } = createFakeDrive()
+    const source = add({ name: 'daily-x.tar', size: '3', md5Checksum: 'abc', parents: ['daily'] })
+
+    const copy = await copyFile(client, { fileId: source.id, name: 'weekly-x.tar', folderId: 'weekly', md5: 'abc', size: 3 })
+    assert.equal(copy.name, 'weekly-x.tar')
+    assert.deepEqual(copy.parents, ['weekly'])
+
+    await assert.rejects(
+        copyFile(client, { fileId: source.id, name: 'monthly-x.tar', folderId: 'monthly', md5: 'different', size: 3, retries: 1 }),
+        /Integrity check failed for "monthly-x.tar"/
+    )
 })

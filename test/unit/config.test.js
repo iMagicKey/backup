@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import '../helpers/setup.js'
-import { buildConfig, DEFAULT_RETENTION, ROOT_DIR } from '../../app/code/config.js'
+import { buildConfig, secretsOf, DEFAULT_RETENTION, ROOT_DIR, PERIODS } from '../../app/code/config.js'
 
 test('defaults', () => {
     const config = buildConfig({ BACKUP_PATHS: '/etc' })
@@ -90,4 +90,24 @@ test('rejects unsafe prefix, server name and storage dir', () => {
 test('telegram enabled without credentials is a warning', () => {
     const config = buildConfig({ BACKUP_PATHS: '/x', TELEGRAM_REPORT_ENABLED: 'true' })
     assert.equal(config.warnings.length, 1)
+})
+
+test('secretsOf lists every credential for redaction', () => {
+    const config = buildConfig({
+        BACKUP_PATHS: '/x',
+        MARIADB_PASSWORD: 'maria-pw',
+        POSTGRES_PASSWORD: 'pg-pw',
+        MONGODB_URI: 'mongodb://u:mongo-pw@h',
+        GOOGLE_APP: '{"clientId":"id","clientSecret":"client-secret"}',
+        GOOGLE_AUTH: '{"access_token":"at","refresh_token":"rt","id_token":"it"}',
+        TELEGRAM_BOT_TOKEN: '1:tg',
+    })
+    const { values, uris } = secretsOf(config)
+    assert.deepEqual(values, ['maria-pw', 'pg-pw', 'client-secret', 'at', 'rt', 'it', '1:tg'])
+    assert.deepEqual(uris, ['mongodb://u:mongo-pw@h'])
+})
+
+test('PERIODS are ordered from shortest to longest', () => {
+    assert.deepEqual(PERIODS, ['minutely', 'hourly', 'daily', 'weekly', 'monthly', 'yearly'])
+    assert.deepEqual(Object.keys(DEFAULT_RETENTION), PERIODS)
 })

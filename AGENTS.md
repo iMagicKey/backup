@@ -4,7 +4,7 @@ Guidelines for AI coding agents (and humans) working on this repository. Read [R
 
 ## Project summary
 
-A Node.js (≥ 24, ESM, no build step, no TypeScript) background service. No HTTP server, no frontend. It dumps files and databases (MariaDB/MySQL, PostgreSQL, MongoDB; on the host or via `docker exec`), bundles them, uploads to Google Drive with per-period retention and reports problems to Telegram.
+A Node.js (≥ 24.10, ESM, no build step, no TypeScript) background service. No HTTP server, no frontend. It dumps files and databases (MariaDB/MySQL, PostgreSQL, MongoDB; on the host or via `docker exec`), bundles them, uploads to Google Drive with per-period retention and reports problems to Telegram.
 
 Runtime dependencies are deliberately few: `@googleapis/drive`, `imagic-config`, `imagic-logger`, `imagic-scheduler`, `imagic-telegram`. All archiving and dumping is done by spawning system tools (`tar`, `zstd`/`gzip`, `mariadb-dump`, `pg_dump`, `mongodump`, `docker`).
 
@@ -67,7 +67,8 @@ app/index.js → bootstrap.js → code/index.js → scheduler/index.js (imagic-s
 
 ### Tests
 
-- Every behaviour change needs a unit test in `test/unit/`. Use `test/helpers/setup.js` (`configFrom`, `tempDir`), `fake-drive.js` and `fake-docker.js` instead of real services.
+- Every exported function and every entry point has unit tests in `test/unit/`; keep it that way (`npm run test:coverage` shows gaps). Every behaviour change needs a test.
+- Use the helpers instead of real services: `test/helpers/setup.js` (`configFrom`, `tempDir`, `stubCommand` for fake dump tools in `PATH`, `withEnv` for scoped environment variables), `fake-drive.js` and `fake-docker.js`. Entry points are tested as child processes with an isolated environment; never let a test read the repository's `.env`.
 - Unit tests must not need network access, databases, Docker or credentials, and must finish in a few seconds.
 - Changes to dump or restore commands must be checked with `npm run test:integration` (local servers or containers). CI runs the Docker variant.
 - Tests write only to temporary directories (`tempDir`), never into the repository.

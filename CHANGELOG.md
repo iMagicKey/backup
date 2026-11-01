@@ -7,7 +7,12 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Changed
 
 - **Breaking:** the misspelled 1.x scheduler names were corrected: the environment variable is now `SCHEDULER_INTERVAL`, the config file `app/config/<APP_ENV>/scheduler.json` and the source directory `app/code/scheduler/`. Rename the variable in existing `.env` files (it is optional; the default is 15000 ms).
+- Minimum Node.js version raised to 24.10: before that the `--env-file`/`--env-file-if-exists` flags used by the npm scripts were experimental and printed a warning. CI now tests the minimum version.
 - `npm run backup:once` exits with code 1 when any component failed (previously only failed uploads did), so cron jobs and monitors notice partial backups.
+
+### Added
+
+- Unit tests for every module and entry point (backup components against stub dump tools, Docker failure modes, Drive client setup, logger redaction, Telegram reports, scheduler wiring, `bootstrap`, the service start/stop, `check`, `create-auth`, `init`, `clear-logs` and the systemd unit) and `npm run test:coverage`.
 
 ### Fixed
 

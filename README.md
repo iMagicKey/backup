@@ -66,7 +66,7 @@ On the very first start (no state file yet) every configured period is due, so t
 
 ## Requirements
 
-- **Linux** with **Node.js ≥ 24**
+- **Linux** with **Node.js ≥ 24.10** (the `--env-file` flags used by the npm scripts are stable from 24.10)
 - **GNU tar**, plus **zstd** (if `BACKUP_COMPRESSION=zstd`) or **gzip**
 - Client tools for the databases you back up, **either on the host or inside the database containers**:
 
@@ -345,6 +345,7 @@ Start with `npm run check`; it tests most of the points below. Logs are in `app/
 
 ```bash
 npm test                 # unit tests (no network, no databases needed)
+npm run test:coverage    # unit tests with a line/branch coverage report
 npm run lint             # ESLint
 npm run format:check     # Prettier
 npm run verify           # all of the above
@@ -369,6 +370,8 @@ npm run test:integration
 
 `IT_COMPRESSION=gzip|zstd` selects the compression (default `zstd`). **The tests create and drop a database named `bk_it`; never point them at production servers.** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the Docker variant against `mariadb:11`, `postgres:18` and `mongo:9` on every push.
 
+Every module has unit tests. Dump tools are replaced by small stub scripts placed first in `PATH`, Google Drive by an in-memory fake, and the entry points (`app/index.js`, `once.js`, `check.js`, `create.js`, `system/*.js`) run as child processes with an isolated environment. Not covered by unit tests, because they need Google or systemd: the OAuth token exchange in `create-auth`, a real Drive upload, and `install-service`/`uninstall-service`.
+
 `test/helpers/fake-docker.js` is a Docker CLI stand-in that runs `docker exec` commands on the host. It lets the Docker code paths be tested without Docker and records all arguments, so the tests can assert that no password is passed on a command line.
 
 ---
@@ -377,7 +380,7 @@ npm run test:integration
 
 Version 2.0 is a rewrite of the internals. Existing `.env` files keep working. Changes to note:
 
-- **Node.js ≥ 24** is required.
+- **Node.js ≥ 24.10** is required.
 - **Scheduler settings renamed** (the 1.x names were misspelled): use `SCHEDULER_INTERVAL` in `.env` and `app/config/<APP_ENV>/scheduler.json`. Both are optional; the default tick is 15000 ms.
 - **Bundle format**: `<period>-YYYY-MM-DD_HH-mm.tar` (uncompressed tar of individually compressed members, plus `manifest.json` and `SHA256SUMS`) instead of `<period>-YYYY.MM.DD-HH:mm.tar.zst`. Timestamps no longer contain colons. Member names changed (`files.tar.zst`, `mariadb.sql.zst`, `postgres-<db>.dump`, `postgres-all.sql.zst`, `mongodb.archive.zst`), and database dumps are now compressed. Old backups in Drive are rotated out normally.
 - **MariaDB** single-database dumps now use `--databases` (the dump contains `CREATE DATABASE`/`USE`) and `--single-transaction --quick --routines --triggers`. `MARIADB_DATABASE` accepts a list.

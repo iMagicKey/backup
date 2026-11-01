@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { configFrom, tempDir, FAKE_DOCKER } from '../helpers/setup.js'
 import { createBackup, COMPONENTS } from '../../app/code/backup/index.js'
-import { assertContainerRunning } from '../../app/code/utils/docker.js'
+import { assertContainerRunning, inContainerIfConfigured } from '../../app/code/utils/docker.js'
 
 function withFakeDocker(t, containers) {
     const dir = tempDir(t)
@@ -102,4 +102,29 @@ test('one failing PostgreSQL database does not discard the others', async (t) =>
     assert.equal(result.failures.length, 1)
     assert.equal(result.failures[0].component, 'PostgreSQL (bad)')
     assert.match(result.failures[0].error.message, /database bad does not exist/)
+})
+
+test('a stopped container and a denied Docker daemon give clear errors', async (t) => {
+    withFakeDocker(t, ['up'])
+    process.env.FAKE_DOCKER_STOPPED = 'down'
+    t.after(() => delete process.env.FAKE_DOCKER_STOPPED)
+    await assert.rejects(assertContainerRunning('down', FAKE_DOCKER), /container "down" is not running \(status: exited\)/)
+
+    process.env.FAKE_DOCKER_DENIED = '1'
+    t.after(() => delete process.env.FAKE_DOCKER_DENIED)
+    await assert.rejects(assertContainerRunning('up', FAKE_DOCKER), /No permission to talk to the Docker daemon/)
+})
+
+test('inContainerIfConfigured wraps only when a container is set', () => {
+    const spec = { command: 'pg_dump', args: ['--dbname=x'], env: { PGPASSWORD: 'p' } }
+    assert.equal(inContainerIfConfigured(spec, undefined, 'docker'), spec)
+    assert.deepEqual(inContainerIfConfigured(spec, 'pg', 'podman').args, ['exec', '-e', 'PGPASSWORD', 'pg', 'pg_dump', '--dbname=x'])
+    assert.equal(inContainerIfConfigured(spec, 'pg', 'podman').command, 'podman')
+})
+
+test('other Docker errors are passed through unchanged', async (t) => {
+    withFakeDocker(t, ['up'])
+    process.env.FAKE_DOCKER_ERROR = 'Cannot connect to the Docker daemon. Is the docker daemon running?'
+    t.after(() => delete process.env.FAKE_DOCKER_ERROR)
+    await assert.rejects(assertContainerRunning('up', FAKE_DOCKER), /exited with code 1:\nCannot connect to the Docker daemon/)
 })

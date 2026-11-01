@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import zlib from 'node:zlib'
 import { tempDir } from '../helpers/setup.js'
-import { run, runToFile, CommandError } from '../../app/code/utils/exec.js'
+import { run, runToFile, CommandError, killActiveProcesses } from '../../app/code/utils/exec.js'
 
 test('run passes env without a shell and captures output', async () => {
     const { stdout } = await run({ command: 'sh', args: ['-c', 'printf "%s" "$SECRET"'], env: { SECRET: 'a b $(c)' }, captureStdout: true })
@@ -71,4 +71,12 @@ test('runToFile reports an output error as the root cause, not the SIGTERM it tr
         runToFile({ command: 'sh', args: ['-c', 'yes | head -c 10000000'] }, out, { compressor: { command: 'gzip', args: ['-c'] } }),
         /ENOENT/
     )
+})
+
+test('killActiveProcesses terminates running children (used on shutdown)', async () => {
+    const pending = run({ command: 'sleep', args: ['30'], label: 'sleeper' })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    killActiveProcesses()
+    await assert.rejects(pending, /sleeper killed by SIGTERM/)
+    killActiveProcesses() // no children left: a no-op
 })

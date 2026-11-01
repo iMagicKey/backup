@@ -45,3 +45,10 @@ test('telegram reports are redacted, escaped and truncated', () => {
     assert.match(escaped, /(&lt;)+\n… \(truncated\)$/)
     assert.equal(escapeHtml('a<b>&c'), 'a&lt;b&gt;&amp;c')
 })
+
+test('registerUriSecrets accepts strings that are not URLs and ignores empty values', () => {
+    registerUriSecrets('not a url but secret-ish')
+    registerUriSecrets(undefined)
+    registerSecret(null)
+    assert.equal(redact('value: not a url but secret-ish'), 'value: ***')
+})

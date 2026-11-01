@@ -39,6 +39,7 @@
         "clear-logs": "node system/logs.js",
         "test": "node --test \"test/unit/**/*.test.js\"",
         "test:integration": "node --test --test-concurrency=1 \"test/integration/**/*.test.js\"",
+        "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude=\"test/**\" --test-coverage-exclude=\"node_modules/**\" \"test/unit/**/*.test.js\"",
         "lint": "eslint .",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
@@ -60,6 +61,6 @@
         "prettier": "^3.9.10"
     },
     "engines": {
-        "node": ">=24"
+        "node": ">=24.10"
     }
 }

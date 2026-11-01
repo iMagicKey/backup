@@ -15,6 +15,7 @@ function once(t, extraEnv) {
     fs.writeFileSync(path.join(src, 'a.txt'), 'a')
     const env = {
         PATH: process.env.PATH,
+        NODE_V8_COVERAGE: process.env.NODE_V8_COVERAGE, // keeps coverage reports of child processes
         TMPDIR: dir,
         APP_ENV: 'test',
         BACKUP_PATHS: src,

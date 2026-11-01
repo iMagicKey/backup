@@ -13,6 +13,10 @@ export function extractCode(input) {
     return new URLSearchParams(query).get('code') || value
 }
 
+export function buildAuthUrl(config) {
+    return createOAuthClient(config).generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: DRIVE_SCOPES })
+}
+
 async function main() {
     const config = buildConfig(process.env)
     if (!config.google.clientId || !config.google.clientSecret) {
@@ -28,7 +32,7 @@ async function main() {
     let code = config.google.tokens.code && !config.google.tokens.refresh_token ? config.google.tokens.code : null
 
     if (!code) {
-        const url = client.generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: DRIVE_SCOPES })
+        const url = buildAuthUrl(config)
         console.log('\n1. Open this URL in a browser and allow access:\n')
         console.log(`   ${url}\n`)
         console.log(`2. You will be redirected to ${config.google.redirectURL}. The page may fail to load; that is expected.`)

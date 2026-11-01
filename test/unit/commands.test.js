@@ -5,7 +5,7 @@ import { buildMariaDbCommand } from '../../app/code/backup/mariadb.js'
 import { buildPgDumpCommand, buildPgDumpAllCommand, safeName } from '../../app/code/backup/postgres.js'
 import { buildMongoDumpCommand, mongoConfigYaml } from '../../app/code/backup/mongodb.js'
 import { buildFilesCommand } from '../../app/code/backup/files.js'
-import { getCompression } from '../../app/code/utils/tar.js'
+import { getCompression, getTarExtension, TAR_OK_CODES } from '../../app/code/utils/tar.js'
 import { ROOT_DIR } from '../../app/code/config.js'
 import { wrapInContainer } from '../../app/code/utils/docker.js'
 
@@ -146,4 +146,12 @@ test('compression settings', () => {
 test('wrapInContainer adds -i only when stdin is used', () => {
     const spec = wrapInContainer({ command: 'cat', args: ['-'], input: 'x', env: { A: '1' } }, { container: 'c' })
     assert.deepEqual(spec.args, ['exec', '-i', '-e', 'A', 'c', 'cat', '-'])
+})
+
+test('tar extension and accepted exit codes', () => {
+    assert.equal(getTarExtension({ compression: 'gzip' }), '.tar.gz')
+    assert.equal(getTarExtension({ compression: 'zstd', zstdLevel: 3 }), '.tar.zst')
+    assert.deepEqual(TAR_OK_CODES, [0, 1])
+    assert.equal(getCompression({ compression: 'gzip' }).decompress, 'gzip -dc')
+    assert.deepEqual(getCompression({ compression: 'zstd', zstdLevel: 19 }).tarFlags, ['-I', 'zstd -T0 -19'])
 })

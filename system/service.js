@@ -5,20 +5,49 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const ROOT_PATH = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
-const SERVICE_NAME = path.basename(ROOT_PATH).replace(/[^\w.@-]/g, '-')
+
+export function serviceNameFor(rootPath) {
+    return path.basename(rootPath).replace(/[^\w.@-]/g, '-')
+}
+
+export function buildUnit({ rootPath, envFile = '.env', nodePath = process.execPath }) {
+    const serviceName = serviceNameFor(rootPath)
+    const logDir = path.join(rootPath, 'app/logs')
+    return `[Unit]
+Description=Backup service (${serviceName})
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=${rootPath}
+ExecStart=${nodePath} --env-file=${path.join(rootPath, envFile)} ${path.join(rootPath, 'app/index.js')}
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+StandardOutput=append:${logDir}/service-output.log
+StandardError=append:${logDir}/service-error.log
+SyslogIdentifier=${serviceName}
+
+[Install]
+WantedBy=multi-user.target
+`
+}
+
+const SERVICE_NAME = serviceNameFor(ROOT_PATH)
 const MARKER_PATH = path.join(ROOT_PATH, 'installed.service')
 const UNIT_PATH = `/etc/systemd/system/${SERVICE_NAME}.service`
 const LOG_DIR = path.join(ROOT_PATH, 'app/logs')
 
-const action = process.argv[2]
-const envFile = process.argv[3] === 'dev' ? '.env.dev' : '.env'
-
 const systemctl = (...args) => execFileSync('systemctl', args, { stdio: 'inherit' })
 
-function install() {
+function install(envFile) {
     if (fs.existsSync(UNIT_PATH)) {
         console.log(`Service already installed (${UNIT_PATH}).`)
         return
@@ -29,28 +58,7 @@ function install() {
     }
 
     fs.mkdirSync(LOG_DIR, { recursive: true })
-    const unit = `[Unit]
-Description=Backup service (${SERVICE_NAME})
-After=network-online.target docker.service
-Wants=network-online.target
-
-[Service]
-Type=simple
-WorkingDirectory=${ROOT_PATH}
-ExecStart=${process.execPath} --env-file=${path.join(ROOT_PATH, envFile)} ${path.join(ROOT_PATH, 'app/index.js')}
-Restart=always
-RestartSec=10
-TimeoutStopSec=30
-NoNewPrivileges=true
-PrivateTmp=true
-UMask=0077
-StandardOutput=append:${LOG_DIR}/service-output.log
-StandardError=append:${LOG_DIR}/service-error.log
-SyslogIdentifier=${SERVICE_NAME}
-
-[Install]
-WantedBy=multi-user.target
-`
+    const unit = buildUnit({ rootPath: ROOT_PATH, envFile })
     fs.writeFileSync(UNIT_PATH, unit, { mode: 0o644 })
     fs.writeFileSync(MARKER_PATH, unit)
     systemctl('daemon-reload')
@@ -74,9 +82,12 @@ function uninstall() {
     console.log(`Service "${SERVICE_NAME}" uninstalled.`)
 }
 
-if (action === 'install') install()
-else if (action === 'uninstall') uninstall()
-else {
-    console.error('Usage: node system/service.js install [dev] | uninstall')
-    process.exit(1)
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    const [action, environment] = process.argv.slice(2)
+    if (action === 'install') install(environment === 'dev' ? '.env.dev' : '.env')
+    else if (action === 'uninstall') uninstall()
+    else {
+        console.error('Usage: node system/service.js install [dev] | uninstall')
+        process.exit(1)
+    }
 }

@@ -7,6 +7,8 @@ import { configFrom, tempDir } from '../helpers/setup.js'
 import { createBackup, cleanStorage, runBackup, uploadBackup, COMPONENTS } from '../../app/code/backup/index.js'
 import { createFakeDrive } from '../helpers/fake-drive.js'
 import { acquireLock, processStartTime } from '../../app/code/utils/fs.js'
+import Telegram from 'imagic-telegram'
+import { configureReport } from '../../app/code/utils/report.js'
 
 const NOW = new Date('2026-10-30T00:00:00Z')
 
@@ -204,4 +206,45 @@ test('the lock is released when preparing the run fails', async (t) => {
 
     assert.equal(fs.existsSync(path.join(dir, 'run-2026-10-30_00-00')), false) // cleaned up by the failed run
     await createBackup(config, { now: NOW, components: [component('a', writes('a.gz', 'A'))] })
+})
+
+test('runBackup reports a summary to Telegram: errors always, success only when enabled', async (t) => {
+    const sent = []
+    t.mock.method(Telegram.prototype, 'sendMessage', async ({ text }) => sent.push(text))
+    const dir = tempDir(t)
+    const src = path.join(dir, 'src')
+    fs.mkdirSync(src)
+    fs.writeFileSync(path.join(src, 'a.txt'), 'a')
+    const env = {
+        BACKUP_PATHS: src,
+        BACKUP_STORAGE_DIR: path.join(dir, 'storage'),
+        TELEGRAM_REPORT_ENABLED: 'true',
+        TELEGRAM_BOT_TOKEN: '1:t',
+        TELEGRAM_CHANNEL_ID: '-1',
+    }
+    t.after(() => configureReport(configFrom({})))
+
+    // Success without TELEGRAM_REPORT_SUCCESS: silent.
+    const quiet = configFrom(env)
+    configureReport(quiet)
+    await runBackup(quiet, { client: createFakeDrive().client, periods: ['daily'], now: NOW })
+    assert.equal(sent.length, 0)
+
+    // Success with TELEGRAM_REPORT_SUCCESS: one summary.
+    const loud = configFrom({ ...env, TELEGRAM_REPORT_SUCCESS: 'true' })
+    configureReport(loud)
+    await runBackup(loud, { client: createFakeDrive().client, periods: ['daily', 'weekly'], now: NOW })
+    assert.match(sent[0], /✅ Backup 2026-10-30_00-00 uploaded to daily, weekly \(\d+(\.\d)? KiB, \d+s\)/)
+
+    // A failing component: a warning listing the problem, even without TELEGRAM_REPORT_SUCCESS.
+    const partial = configFrom({ ...env, MARIADB_ENABLED: 'true', MARIADB_ALL: 'true', MARIADB_DUMP_COMMAND: 'false' })
+    configureReport(partial)
+    await runBackup(partial, { client: createFakeDrive().client, periods: ['daily'], now: NOW })
+    assert.match(sent[1], /⚠️ Backup 2026-10-30_00-00 finished with errors .*\n• MariaDB: mariadb-dump exited with code 1/)
+
+    // Nothing at all could be backed up: an error report, and the error is marked as reported.
+    const broken = configFrom({ ...env, BACKUP_PATHS: path.join(dir, 'missing') })
+    configureReport(broken)
+    await assert.rejects(runBackup(broken, { client: createFakeDrive().client, periods: ['daily'], now: NOW }), (err) => err.reported)
+    assert.match(sent[2], /❌ Backup failed for daily: No backup artifacts were created \(files\)/)
 })
