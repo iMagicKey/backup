@@ -41,7 +41,9 @@ try {
     }
 
     if (!upload) Logger.plog('Once', `Local bundle: ${result.bundle.bundlePath}`)
-    process.exit(upload && result.failed.length ? 1 : 0)
+    // Non-zero when anything is missing, so cron jobs and monitors notice partial backups.
+    const incomplete = result.bundle.failures.length > 0 || (upload && result.failed.length > 0)
+    process.exit(incomplete ? 1 : 0)
 } catch (err) {
     Logger.perror('Once', err)
     process.exit(1)

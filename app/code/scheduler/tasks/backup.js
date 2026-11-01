@@ -11,13 +11,14 @@ export function getDuePeriods(labels, state, periods) {
  * retried after `retryMs`. A running backup is never started twice, even if the scheduler times out.
  */
 export function createBackupTask({ config, store, runBackup, now = () => new Date() }) {
-    const state = store.load()
     let running = false
     let retryAt = 0
 
     return async function backupTask() {
         if (running || Date.now() < retryAt) return
 
+        // Reloaded every time: `npm run backup:once` may have recorded a run since the last check.
+        const state = store.load()
         const labels = getTimeLabels(now())
         const due = getDuePeriods(labels, state, config.backup.periods)
         if (!due.length) return

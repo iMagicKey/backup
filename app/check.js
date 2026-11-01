@@ -22,15 +22,19 @@ async function check(name, fn) {
     }
 }
 
-const commandExists = (command, container) =>
-    run({
-        ...(container
-            ? wrapInContainer({ command: 'sh', args: ['-c', `command -v ${command}`] }, { container, dockerCommand: config.docker.command })
-            : { command: 'sh', args: ['-c', `command -v ${command}`] }),
+// Prints the path of the first of `commands` that exists. Names are positional parameters, never part of the script.
+const FIND_COMMAND = 'for c in "$@"; do command -v "$c" && exit 0; done; exit 1'
+
+const commandExists = (commands, container) => {
+    const names = [commands].flat()
+    const spec = { command: 'sh', args: ['-c', FIND_COMMAND, 'sh', ...names] }
+    return run({
+        ...(container ? wrapInContainer(spec, { container, dockerCommand: config.docker.command }) : spec),
         captureStdout: true,
         timeoutMs: 30000,
-        label: `lookup of ${command}`,
+        label: `lookup of ${names.join(' or ')}`,
     }).then(({ stdout }) => stdout.trim())
+}
 
 await check('configuration', () => {
     if (errors.length) throw new Error(errors.join('; '))
@@ -56,7 +60,7 @@ if (config.backup.paths.length) {
 }
 
 const databases = [
-    { name: 'MariaDB', cfg: config.mariadb, tool: config.mariadb.dumpCommand || 'mariadb-dump || command -v mysqldump' },
+    { name: 'MariaDB', cfg: config.mariadb, tool: config.mariadb.dumpCommand || ['mariadb-dump', 'mysqldump'] },
     { name: 'PostgreSQL', cfg: config.postgres, tool: config.postgres.all ? 'pg_dumpall' : 'pg_dump' },
     { name: 'MongoDB', cfg: config.mongodb, tool: 'mongodump' },
 ]

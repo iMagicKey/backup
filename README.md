@@ -252,7 +252,7 @@ With Docker Compose, use the container name (`docker compose ps` shows it, e.g. 
 | `npm run live`                            | Run the service with `.env` (foreground)                                    |
 | `npm run dev`                             | Run the service with `.env.dev`                                             |
 | `npm start`                               | Run with `.env` if present, otherwise with the existing environment         |
-| `npm run backup:once`                     | One backup cycle now for all `BACKUP_PERIODS`, then exit                    |
+| `npm run backup:once`                     | One backup cycle now for all `BACKUP_PERIODS`, then exit (code 1 if any component or upload failed) |
 | `npm run backup:once -- daily weekly`     | One cycle for the given periods only                                        |
 | `npm run backup:once -- --no-upload`      | Create the local bundle only (no Google credentials needed); prints its path |
 | `npm run check`                           | Diagnose config, tools, containers, storage and Google Drive access         |

@@ -99,3 +99,22 @@ test('file store persists atomically and tolerates corruption', (t) => {
     fs.writeFileSync(file, '{broken')
     assert.deepEqual(store.load(), {})
 })
+
+test('state recorded elsewhere (e.g. by backup:once) is picked up before each run', async () => {
+    const config = configFrom({ BACKUP_PERIODS: 'daily' })
+    const store = memoryStore()
+    const calls = []
+    const task = createBackupTask({
+        config,
+        store,
+        now: () => new Date('2026-10-30T10:00:00Z'),
+        runBackup: async (periods) => {
+            calls.push(periods)
+            return { succeeded: periods }
+        },
+    })
+
+    store.save({ daily: '2026-10-30' }) // written after the task was created
+    await task()
+    assert.deepEqual(calls, [])
+})

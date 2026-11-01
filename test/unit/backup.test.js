@@ -193,3 +193,15 @@ test('the files backup never includes the service working directories', async (t
     assert.match(listing, /data\.txt/)
     assert.doesNotMatch(listing, /storage/)
 })
+
+test('the lock is released when preparing the run fails', async (t) => {
+    const dir = tempDir(t)
+    const config = configFrom({ BACKUP_STORAGE_DIR: dir })
+    // A plain file where the run directory should go makes mkdir fail after the lock was taken.
+    fs.writeFileSync(path.join(dir, 'run-2026-10-30_00-00'), '')
+    await assert.rejects(createBackup(config, { now: NOW, components: [component('a', writes('a.gz', 'A'))] }), /EEXIST|ENOTDIR/)
+    assert.equal(fs.existsSync(path.join(dir, '.backup.lock')), false)
+
+    assert.equal(fs.existsSync(path.join(dir, 'run-2026-10-30_00-00')), false) // cleaned up by the failed run
+    await createBackup(config, { now: NOW, components: [component('a', writes('a.gz', 'A'))] })
+})

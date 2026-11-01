@@ -89,12 +89,12 @@ export async function createBackup(config, { now = new Date(), components = COMP
 
     ensurePrivateDir(backup.storageDir)
     const releaseLock = lock ? acquireLock(lockPath(backup)) : () => {}
-    cleanStorage(backup)
-
     const runDir = path.join(backup.storageDir, `run-${stamp}`)
-    ensurePrivateDir(runDir)
 
     try {
+        cleanStorage(backup)
+        ensurePrivateDir(runDir)
+
         // Components that back up several things (e.g. PostgreSQL databases) record partial failures in ctx.failures.
         const ctx = { runDir, timeoutMs: backup.timeoutMs, warnings, failures }
         const results = await Promise.allSettled(components.map((component) => component.run(config, ctx)))

@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Changed
 
 - **Breaking:** the misspelled 1.x scheduler names were corrected: the environment variable is now `SCHEDULER_INTERVAL`, the config file `app/config/<APP_ENV>/scheduler.json` and the source directory `app/code/scheduler/`. Rename the variable in existing `.env` files (it is optional; the default is 15000 ms).
+- `npm run backup:once` exits with code 1 when any component failed (previously only failed uploads did), so cron jobs and monitors notice partial backups.
+
+### Fixed
+
+- Running `npm run backup:once` while the service was running could make the service repeat the same backup: the service now reloads `state.json` before every check.
+- `npm run check` inserted `MARIADB_DUMP_COMMAND` into a shell command.
+- The backup lock was not released if preparing the run directory failed.
 
 ## [2.0.0] - 2026-10-30
 
